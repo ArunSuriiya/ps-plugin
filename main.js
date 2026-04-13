@@ -78,14 +78,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             } else {
                 if (currentFolderId === null) {
                     displayFolders = folders;
-                    // ROBUST FILTER: Show assets if folderId is null, undefined, or 'root'
                     displayAssets = assets.filter(a => !a.folderId || a.folderId === 'root');
                 } else {
                     displayAssets = assets.filter(a => a.folderId === currentFolderId);
                 }
             }
-
-            console.log(`Displaying: ${displayFolders.length} folders, ${displayAssets.length} assets.`);
 
             if (displayFolders.length === 0 && displayAssets.length === 0) {
                 assetGrid.innerHTML = `<div style="width:100%; padding:40px; color:#666; text-align:center;">Empty</div>`;
@@ -95,16 +92,18 @@ document.addEventListener("DOMContentLoaded", async () => {
             let html = "";
             const placeholder = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
+            // FOLDERS
             displayFolders.forEach(folder => {
                 html += `
                     <div class="list-item folder-item" id="item-${folder.id}">
                         <div class="item-thumb" style="font-size:24px;">📁</div>
                         <div class="item-name">${folder.name}</div>
-                        <button class="item-del-btn" id="del-${folder.id}">✕</button>
+                        <button class="item-del-btn" id="del-${folder.id}" data-id="${folder.id}">✕</button>
                     </div>
                 `;
             });
 
+            // ASSETS
             displayAssets.forEach(asset => {
                 html += `
                     <div class="list-item" id="item-${asset.id}">
@@ -112,7 +111,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             <img id="img-${asset.id}" src="${placeholder}">
                         </div>
                         <div class="item-name">${asset.name || "Untitled"}</div>
-                        <button class="item-del-btn" id="del-${asset.id}">✕</button>
+                        <button class="item-del-btn" id="del-${asset.id}" data-id="${asset.id}">✕</button>
                     </div>
                 `;
             });
@@ -121,38 +120,41 @@ document.addEventListener("DOMContentLoaded", async () => {
             updateStatus(query ? `Filtered` : `Ready`);
             adjustLayout();
 
-            assetGrid.onclick = async (e) => {
-                const delBtn = e.target.closest(".item-del-btn");
-                if (delBtn) {
-                    const id = delBtn.id.replace("del-", "");
-                    if (confirm("Delete permanently?")) {
-                        if (id.startsWith("folder_")) await window.storageManager.deleteFolder(id);
-                        else await window.storageManager.deleteAsset(id);
-                        await refreshList();
-                    }
-                    return;
-                }
-            };
-
+            // REPLACEMENT: Use Direct Listeners instead of delegation for buttons
             [...displayFolders, ...displayAssets].forEach(item => {
-                const dom = document.getElementById(`item-${item.id}`);
-                if (!dom) return;
-                
-                dom.ondblclick = async () => {
-                    if (item.id.startsWith("folder_")) {
-                        currentFolderId = item.id;
-                        searchInput.value = "";
-                        await refreshList();
-                    } else {
-                        await importAsset(item);
-                    }
-                };
+                const delBtn = document.getElementById(`del-${item.id}`);
+                const card = document.getElementById(`item-${item.id}`);
 
-                if (!item.id.startsWith("folder_")) {
-                    window.storageManager.getThumbnailUrl(item.id).then(url => {
-                        const img = document.getElementById(`img-${item.id}`);
-                        if (img && url) img.src = url;
-                    }).catch(() => {});
+                if (delBtn) {
+                    delBtn.onclick = async (e) => {
+                        e.stopPropagation(); // Prevent card double-click
+                        console.log("Delete clicked for:", item.id);
+                        if (confirm(`Permanently delete "${item.name}"?`)) {
+                            updateStatus("Deleting...");
+                            if (item.id.startsWith("folder_")) await window.storageManager.deleteFolder(item.id);
+                            else await window.storageManager.deleteAsset(item.id);
+                            await refreshList();
+                        }
+                    };
+                }
+                
+                if (card) {
+                    card.ondblclick = async () => {
+                        if (item.id.startsWith("folder_")) {
+                            currentFolderId = item.id;
+                            searchInput.value = "";
+                            await refreshList();
+                        } else {
+                            await importAsset(item);
+                        }
+                    };
+
+                    if (!item.id.startsWith("folder_")) {
+                        window.storageManager.getThumbnailUrl(item.id).then(url => {
+                            const img = document.getElementById(`img-${item.id}`);
+                            if (img && url) img.src = url;
+                        }).catch(() => {});
+                    }
                 }
             });
 
@@ -195,7 +197,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                     await triggerSave(fId);
                 }
             };
-        } catch (e) { alert("Picker Error"); }
+        } catch (e) { updateStatus("Save Error"); }
     };
 
     cancelPicker.onclick = () => pickerOverlay.style.display = "none";
