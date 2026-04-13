@@ -44,11 +44,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.addEventListener("resize", adjustLayout);
 
     try {
-        updateStatus("Loading Storage...");
+        updateStatus("Loading...");
         await window.storageManager.init();
         await refreshList();
     } catch (e) {
-        updateStatus("Error Init");
+        updateStatus("Init Error");
     }
 
     async function refreshList() {
@@ -56,6 +56,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             const assets = await window.storageManager.getAssets();
             const folders = await window.storageManager.getFolders();
             const query = (searchInput.value || "").trim().toLowerCase();
+
+            console.log(`Refreshing UI... Total Assets: ${assets.length}, Total Folders: ${folders.length}`);
 
             if (currentFolderId) {
                 const folder = folders.find(f => f.id === currentFolderId);
@@ -72,19 +74,21 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (query) {
                 displayFolders = folders.filter(f => f.name.toLowerCase().includes(query));
                 displayAssets = assets.filter(a => a.name.toLowerCase().includes(query));
-                breadcrumb.innerText = "Search Result";
-                backBtn.style.display = "block";
+                breadcrumb.innerText = "Search";
             } else {
                 if (currentFolderId === null) {
                     displayFolders = folders;
-                    displayAssets = assets.filter(a => a.folderId === null);
+                    // ROBUST FILTER: Show assets if folderId is null, undefined, or 'root'
+                    displayAssets = assets.filter(a => !a.folderId || a.folderId === 'root');
                 } else {
                     displayAssets = assets.filter(a => a.folderId === currentFolderId);
                 }
             }
 
+            console.log(`Displaying: ${displayFolders.length} folders, ${displayAssets.length} assets.`);
+
             if (displayFolders.length === 0 && displayAssets.length === 0) {
-                assetGrid.innerHTML = `<div style="grid-column:1/-1; padding:40px; color:#666; text-align:center;">Empty</div>`;
+                assetGrid.innerHTML = `<div style="width:100%; padding:40px; color:#666; text-align:center;">Empty</div>`;
                 return;
             }
 
@@ -153,7 +157,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
         } catch (e) {
-            updateStatus("Error Refresh");
+            updateStatus("Refresh Error");
+            console.error(e);
         }
     }
 
@@ -190,29 +195,27 @@ document.addEventListener("DOMContentLoaded", async () => {
                     await triggerSave(fId);
                 }
             };
-        } catch (e) { updateStatus("Save Error"); }
+        } catch (e) { alert("Picker Error"); }
     };
 
     cancelPicker.onclick = () => pickerOverlay.style.display = "none";
     backBtn.onclick = () => { currentFolderId = null; refreshList(); };
 
     async function triggerSave(folderId) {
-        updateStatus("Step 1: Capturing...");
+        updateStatus("Capturing...");
         try {
             const data = await window.psHost.extractAssetData();
             if (!data || !data.assetBuffer) throw new Error("Capture fail");
             
-            updateStatus("Step 2: Writing to disk...");
+            updateStatus("Saving...");
             const id = Date.now().toString();
             await window.storageManager.saveAsset({id, name: data.metadata.name, folderId, metadata: data.metadata}, data.assetBuffer, data.thumbBuffer);
             
-            updateStatus("Step 3: Updating view...");
             await refreshList();
             updateStatus("Saved Successfully!");
         } catch (e) { 
-            console.error(e);
-            updateStatus("FAILED to Save Selection");
-            alert("Save Failed: " + e.message);
+            updateStatus("Save Failed");
+            alert("Error: " + e.message);
         }
     }
 

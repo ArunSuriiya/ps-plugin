@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        /* FULL RESPONSIVE OVERHAUL */
+        /* FULL RESPONSIVE OVERHAUL - STABLE FLEXBOX VERSION */
         html, body {
             margin: 0; padding: 0;
             width: 100%; height: 100%;
@@ -84,7 +84,7 @@
             display: none;
         }
         
-        /* THE RESPONSIVE FLUID GRID */
+        /* FLEXBOX GRID FOR STABILITY */
         #asset-grid {
             position: absolute;
             top: 165px; 
@@ -95,13 +95,14 @@
             background: #111;
             box-sizing: border-box;
             
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            display: flex;
+            flex-wrap: wrap;
             gap: 12px;
-            align-content: start;
+            align-content: flex-start;
+            justify-content: flex-start;
         }
 
-        /* CARD STYLE */
+        /* CARD STYLE - FIXED WIDTH */
         .list-item {
             background: #252525 !important;
             color: #fff !important;
@@ -113,17 +114,18 @@
             position: relative;
             cursor: pointer;
             overflow: hidden;
+            width: 140px; /* Fixed width for flex wrapping */
             height: 160px;
         }
         .list-item:hover { background: #333 !important; }
         
-        /* FOLDER ITEM - MUST SPAN FULL WIDTH */
+        /* FOLDER ITEM - SPAN FULL WIDTH */
         .folder-item {
             border: 2px solid #3a86ff !important;
             background: #1e2a3b !important;
-            height: 50px !important; /* Fixed height for folders */
-            flex-direction: row !important; /* Horizontal layout */
-            grid-column: 1 / -1 !important; /* FORCES FULL WIDTH IN GRID */
+            height: 50px !important;
+            flex-direction: row !important;
+            width: 100% !important; /* Spans full flex width */
             padding: 0 10px;
             align-items: center;
         }
@@ -131,7 +133,6 @@
             width: 35px !important; height: 100% !important; 
             margin: 0 !important; border: none !important; 
             background: transparent !important;
-            border-bottom: none !important;
         }
         .folder-item .item-name {
             text-align: left !important;
@@ -204,14 +205,12 @@
         }
         .modal-title { font-weight: bold; margin-bottom: 20px; text-align: center; color: #3a86ff; }
         
-        /* PICKER LIST */
         .picker-option {
             background: #333; padding: 12px; margin-bottom: 8px; border-radius: 8px;
             cursor: pointer; text-align: center; font-size: 13px;
         }
         .picker-option:hover { background: #3a86ff; }
 
-        /* FOLDER INPUT */
         .modal-input {
             background: #000; border: 1px solid #444; color: white;
             width: 100%; padding: 10px; border-radius: 6px; margin-bottom: 20px;
@@ -246,10 +245,9 @@
     </div>
 
     <div id="asset-grid">
-        <!-- RESPONSIVE GRID CONTENT -->
+        <!-- FLEXBOX GRID CONTENT -->
     </div>
 
-    <!-- SAVE PICKER OVERLAY -->
     <div class="overlay" id="picker-overlay">
         <div class="modal-box">
             <div class="modal-title">Save to Folder...</div>
@@ -258,7 +256,6 @@
         </div>
     </div>
 
-    <!-- NEW FOLDER MODAL OVERLAY -->
     <div class="overlay" id="folder-overlay">
         <div class="modal-box">
             <div class="modal-title">Create New Folder</div>
