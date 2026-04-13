@@ -1,44 +1,49 @@
-# 📸 Photoshop Asset Library - Mac Distribution
+# 📸 Photoshop Asset Library - Universal Distribution (Mac & Windows)
 
 A professional, high-stability UXP Asset Library plugin for Photoshop. Designed to help you save, manage, and search for design assets (layers, shapes, groups) with instant import and high-visibility thumbnails.
 
 ---
 
-## 🚀 Installation Instructions (MAC)
+## 🚀 Installation Instructions (Universal)
 
-### Option 1: Developer Mode (Recommended)
-This is the fastest and most reliable way to run the plugin on Mac.
+### Option 1: Double-Click Installer (.ccx)
+This is the easiest way to install on **both Mac and Windows**.
 
-1.  **Download & Install**: Install the [Adobe UXP Developer Tool](https://developer.adobe.com/photoshop/uxp/devtool/) from the Creative Cloud Desktop app.
-2.  **Download Plugin**: Download this repository as a ZIP and extract the folder.
-3.  **Add Plugin**: Open the UXP Developer Tool, click **"Add Plugin"**, and select the `manifest.json` file inside the extracted folder.
-4.  **Load**: Ensure Photoshop is open, then click **"Load"** in the UXP Developer Tool.
-5.  **Use**: Go to `Window > Extensions (Legacy)` or `Window > Plugins` inside Photoshop to open the **Asset Library**.
+1.  Download the [Asset_Library.ccx](Asset_Library.ccx) file.
+2.  **Double-click** the file.
+3.  Adobe Creative Cloud Desktop will open and handle the installation.
 
-### Option 2: Persistent Install
-If you want the plugin to stay in Photoshop without the Developer Tool:
+### Option 2: Developer Mode (Mac & Windows)
+Recommended if you want to modify or debug the plugin.
 
-1.  Navigate to your Photoshop Plugins folder:
-    `/Applications/Adobe Photoshop [YEAR]/Plug-ins/`
-2.  Create a folder named `AssetLibrary`.
-3.  Copy all files from this repository into that folder.
-4.  Restart Photoshop.
+1.  **Install Tool**: Install the [Adobe UXP Developer Tool](https://developer.adobe.com/photoshop/uxp/devtool/) from Creative Cloud.
+2.  **Add Plugin**: Open the tool, click **"Add Plugin"**, and select the `manifest.json` from this repository.
+3.  **Load**: Ensure Photoshop is open, then click **"Load"** in the tool.
+
+### Option 3: Manual Installation
+If you prefer to "paste" the folder manually:
+
+- **Windows Path**:
+  Press `Win + R`, paste `%AppData%\Adobe\UXP\Plugins\`, and drop the folder inside.
+- **Mac Path**:
+  Press `Cmd + Shift + G`, paste `~/Library/Application Support/Adobe/UXP/Plugins/`, and drop the folder inside.
 
 ---
 
 ## 🛠 Features
+- **Cross-Platform**: Works perfectly on Windows and macOS.
+- **2-Column Responsive Grid**: Beautiful, fluid display of your assets.
+- **Hover-to-Manage**: Delete buttons only appear when you hover for a clean UI.
 - **One-Click Save**: Select any layer in Photoshop and click `+ SAVE SELECTION`.
-- **Mini Previews**: Instantly see what's in your library with high-quality thumbnails.
-- **Search & Filter**: Type in the top bar to filter your library by asset name.
-- **Instant Import**: Double-click any asset to place it back into your current document.
-- **Robust Layout**: Specifically engineered for Mac to prevent "Black Screen" rendering errors.
+- **Search & Filter**: Find assets instantly by name.
+- **Local Storage**: Assets are kept on your machine for privacy and speed.
 
 ---
 
-## ⚠️ Troubleshooting (Mac)
-- **Plugin is Black**: If the plugin doesn't render, go to the UXP Developer Tool and click **Reload**.
-- **Images aren't showing**: Click the "Reload" button in the plugin status bar (at the top).
-- **Permissions**: Ensure Photoshop has "Full Disk Access" in Mac System Settings if saving fails.
+## ⚠️ Troubleshooting
+- **Black Screen**: Go to the UXP Developer Tool and click **Reload**.
+- **Windows Missing Folder**: Ensure you are looking in `Roaming` AppData, not `Local`.
+- **Mac Permissions**: Ensure Photoshop has "Full Disk Access" in System Settings.
 
 ---
 
