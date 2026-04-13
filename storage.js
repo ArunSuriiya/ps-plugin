@@ -10,18 +10,20 @@ class StorageManager {
     }
 
     async init() {
-        console.log("Initializing storage with Folder Support...");
+        console.log("Initializing storage...");
         try {
             const dataFolder = await localFileSystem.getDataFolder();
             let file;
             try {
                 file = await dataFolder.getEntry(this.metadataFileName);
                 const jsonText = await file.read();
+                if (!jsonText || jsonText.trim() === "") {
+                    throw new Error("Empty file");
+                }
                 const rawData = JSON.parse(jsonText);
 
-                // MIGRATION: If old format (array), convert to new object format
                 if (Array.isArray(rawData)) {
-                    console.log("Migrating legacy array to folder-aware object...");
+                    console.log("Migration triggered");
                     this.data.assets = rawData.map(a => ({ ...a, folderId: null }));
                     this.data.folders = [];
                     await this._saveMetadata();
@@ -31,26 +33,28 @@ class StorageManager {
                         folders: rawData.folders || []
                     };
                 }
-                console.log(`Loaded ${this.data.assets.length} assets and ${this.data.folders.length} folders.`);
             } catch (e) {
+                console.warn("Loading blank metadata", e.message);
                 this.data = { assets: [], folders: [] };
+                await this._saveMetadata(); // Initialize file
             }
             return true;
         } catch (e) {
-            console.error("Storage Init Error", e);
+            console.error("Critical Storage Init Error", e);
             return false;
         }
     }
 
     async getAssets() {
-        return this.data.assets;
+        return this.data.assets || [];
     }
 
     async getFolders() {
-        return this.data.folders;
+        return this.data.folders || [];
     }
 
     async createFolder(name) {
+        if (!name) return null;
         const folder = {
             id: "folder_" + Date.now(),
             name: name,
@@ -62,17 +66,11 @@ class StorageManager {
     }
 
     async deleteFolder(id) {
-        // 1. Remove Folder
         this.data.folders = this.data.folders.filter(f => f.id !== id);
-        
-        // 2. ORPHAN PROTECTION: Move assets in this folder back to Root
         this.data.assets = this.data.assets.map(asset => {
-            if (asset.folderId === id) {
-                return { ...asset, folderId: null };
-            }
+            if (asset.folderId === id) return { ...asset, folderId: null };
             return asset;
         });
-        
         await this._saveMetadata();
         return true;
     }
@@ -101,20 +99,16 @@ class StorageManager {
         try {
             const dataFolder = await localFileSystem.getDataFolder();
             
-            // 1. Save Main Binary
             const assetFile = await dataFolder.createFile(`${assetMetadata.id}.dat`, { overwrite: true });
             await assetFile.write(assetBinary, { format: require('uxp').storage.formats.binary });
 
-            // 2. Save Thumbnail Binary
             if (thumbBinary) {
                 const thumbFile = await dataFolder.createFile(`thumb_${assetMetadata.id}.png`, { overwrite: true });
                 await thumbFile.write(thumbBinary, { format: require('uxp').storage.formats.binary });
             }
 
-            // 3. Save Metadata
             this.data.assets.push(assetMetadata);
             await this._saveMetadata();
-
             return true;
         } catch (e) {
             console.error("Save Error", e);
@@ -123,9 +117,15 @@ class StorageManager {
     }
 
     async _saveMetadata() {
-        const dataFolder = await localFileSystem.getDataFolder();
-        const metadataFile = await dataFolder.createFile(this.metadataFileName, { overwrite: true });
-        await metadataFile.write(JSON.stringify(this.data, null, 2));
+        try {
+            const dataFolder = await localFileSystem.getDataFolder();
+            const metadataFile = await dataFolder.createFile(this.metadataFileName, { overwrite: true });
+            await metadataFile.write(JSON.stringify(this.data, null, 2));
+            console.log("Metadata saved successfully");
+        } catch (e) {
+            console.error("Metadata Save Failed", e);
+            throw e;
+        }
     }
 
     async getAssetBinary(id) {

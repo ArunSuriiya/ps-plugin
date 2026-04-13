@@ -101,7 +101,7 @@
             align-content: start;
         }
 
-        /* GRID CARD STYLE */
+        /* CARD STYLE */
         .list-item {
             background: #252525 !important;
             color: #fff !important;
@@ -117,14 +117,26 @@
         }
         .list-item:hover { background: #333 !important; }
         
+        /* FOLDER ITEM - MUST SPAN FULL WIDTH */
         .folder-item {
             border: 2px solid #3a86ff !important;
             background: #1e2a3b !important;
-            height: 60px;
-            flex-direction: row !important;
+            height: 50px !important; /* Fixed height for folders */
+            flex-direction: row !important; /* Horizontal layout */
+            grid-column: 1 / -1 !important; /* FORCES FULL WIDTH IN GRID */
+            padding: 0 10px;
+            align-items: center;
         }
         .folder-item .item-thumb {
-            width: 40px; height: 100%; margin: 0; border: none; background: transparent;
+            width: 35px !important; height: 100% !important; 
+            margin: 0 !important; border: none !important; 
+            background: transparent !important;
+            border-bottom: none !important;
+        }
+        .folder-item .item-name {
+            text-align: left !important;
+            padding: 0 0 0 10px !important;
+            font-size: 13px !important;
         }
         
         .item-thumb {
