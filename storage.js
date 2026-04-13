@@ -1,4 +1,5 @@
 const { localFileSystem } = require('uxp').storage;
+const { formats } = require('uxp').storage;
 
 class StorageManager {
     constructor() {
@@ -17,13 +18,11 @@ class StorageManager {
             try {
                 file = await dataFolder.getEntry(this.metadataFileName);
                 const jsonText = await file.read();
-                if (!jsonText || jsonText.trim() === "") {
-                    throw new Error("Empty file");
-                }
+                if (!jsonText || jsonText.trim() === "") throw new Error("Empty file");
+                
                 const rawData = JSON.parse(jsonText);
-
                 if (Array.isArray(rawData)) {
-                    console.log("Migration triggered");
+                    console.log("Migrating legacy data...");
                     this.data.assets = rawData.map(a => ({ ...a, folderId: null }));
                     this.data.folders = [];
                     await this._saveMetadata();
@@ -34,10 +33,11 @@ class StorageManager {
                     };
                 }
             } catch (e) {
-                console.warn("Loading blank metadata", e.message);
+                console.warn("Starting with fresh metadata");
                 this.data = { assets: [], folders: [] };
-                await this._saveMetadata(); // Initialize file
+                await this._saveMetadata();
             }
+            console.log(`Storage Ready: ${this.data.assets.length} assets.`);
             return true;
         } catch (e) {
             console.error("Critical Storage Init Error", e);
@@ -45,21 +45,13 @@ class StorageManager {
         }
     }
 
-    async getAssets() {
-        return this.data.assets || [];
-    }
-
-    async getFolders() {
-        return this.data.folders || [];
-    }
+    async getAssets() { return this.data.assets || []; }
+    async getFolders() { return this.data.folders || []; }
 
     async createFolder(name) {
         if (!name) return null;
-        const folder = {
-            id: "folder_" + Date.now(),
-            name: name,
-            type: "folder"
-        };
+        console.log("Creating folder:", name);
+        const folder = { id: "folder_" + Date.now(), name: name, type: "folder" };
         this.data.folders.push(folder);
         await this._saveMetadata();
         return folder;
@@ -67,10 +59,7 @@ class StorageManager {
 
     async deleteFolder(id) {
         this.data.folders = this.data.folders.filter(f => f.id !== id);
-        this.data.assets = this.data.assets.map(asset => {
-            if (asset.folderId === id) return { ...asset, folderId: null };
-            return asset;
-        });
+        this.data.assets = this.data.assets.map(a => (a.folderId === id ? { ...a, folderId: null } : a));
         await this._saveMetadata();
         return true;
     }
@@ -79,39 +68,47 @@ class StorageManager {
         try {
             const dataFolder = await localFileSystem.getDataFolder();
             const thumbFile = await dataFolder.getEntry(`thumb_${id}.png`);
-            const buffer = await thumbFile.read({ format: require('uxp').storage.formats.binary });
+            const buffer = await thumbFile.read({ format: formats.binary });
             return this._arrayBufferToBase64(buffer);
         } catch (e) {
             return null;
         }
     }
 
+    // ROBUST BASE64 CONVERSION
     _arrayBufferToBase64(buffer) {
-        let binary = "";
         const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < bytes.byteLength; i++) {
+        let binary = "";
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
             binary += String.fromCharCode(bytes[i]);
         }
         return `data:image/png;base64,${window.btoa(binary)}`;
     }
 
     async saveAsset(assetMetadata, assetBinary, thumbBinary) {
+        console.log("StorageManager: Saving binary data...");
         try {
             const dataFolder = await localFileSystem.getDataFolder();
             
+            // 1. Save Main Binary
             const assetFile = await dataFolder.createFile(`${assetMetadata.id}.dat`, { overwrite: true });
-            await assetFile.write(assetBinary, { format: require('uxp').storage.formats.binary });
+            await assetFile.write(assetBinary, { format: formats.binary });
+            console.log("Main binary written.");
 
+            // 2. Save Thumbnail Binary
             if (thumbBinary) {
                 const thumbFile = await dataFolder.createFile(`thumb_${assetMetadata.id}.png`, { overwrite: true });
-                await thumbFile.write(thumbBinary, { format: require('uxp').storage.formats.binary });
+                await thumbFile.write(thumbBinary, { format: formats.binary });
+                console.log("Thumbnail binary written.");
             }
 
+            // 3. Save Metadata
             this.data.assets.push(assetMetadata);
             await this._saveMetadata();
             return true;
         } catch (e) {
-            console.error("Save Error", e);
+            console.error("Save Binary Error:", e);
             throw e;
         }
     }
@@ -121,9 +118,9 @@ class StorageManager {
             const dataFolder = await localFileSystem.getDataFolder();
             const metadataFile = await dataFolder.createFile(this.metadataFileName, { overwrite: true });
             await metadataFile.write(JSON.stringify(this.data, null, 2));
-            console.log("Metadata saved successfully");
+            console.log("Metadata updated successfully.");
         } catch (e) {
-            console.error("Metadata Save Failed", e);
+            console.error("Metadata Write Fail:", e);
             throw e;
         }
     }
@@ -132,10 +129,8 @@ class StorageManager {
         try {
             const dataFolder = await localFileSystem.getDataFolder();
             const file = await dataFolder.getEntry(`${id}.dat`);
-            return await file.read({ format: require('uxp').storage.formats.binary });
-        } catch (e) {
-            return null;
-        }
+            return await file.read({ format: formats.binary });
+        } catch (e) { return null; }
     }
 
     async deleteAsset(id) {
@@ -143,13 +138,10 @@ class StorageManager {
             const dataFolder = await localFileSystem.getDataFolder();
             try { (await dataFolder.getEntry(`${id}.dat`)).delete(); } catch(e) {}
             try { (await dataFolder.getEntry(`thumb_${id}.png`)).delete(); } catch(e) {}
-            
             this.data.assets = this.data.assets.filter(a => a.id !== id);
             await this._saveMetadata();
             return true;
-        } catch (e) {
-            return false;
-        }
+        } catch (e) { return false; }
     }
 }
 

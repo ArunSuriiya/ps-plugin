@@ -26,6 +26,7 @@ class PhotoshopHost {
             }
         ], { synchronousExecution: true });
 
+        if (!result || !result[0]) throw new Error("Layer info fail");
         const desc = result[0];
         
         let extension = "png";
@@ -33,7 +34,6 @@ class PhotoshopHost {
         
         const kindStr = layer.kind.toString();
         if (kindStr.includes("SOLIDFILL")) {
-            // Shapes are now saved as PSD to preserve native vector data
             extension = "psd";
             type = "shape";
         } else if (kindStr.includes("SMARTOBJECT")) {
@@ -61,6 +61,8 @@ class PhotoshopHost {
         let assetBuffer = null;
         let info = null;
 
+        console.log("PhotoshopHost: Starting capture...");
+
         await core.executeAsModal(async () => {
             info = await this.getSelectedLayerInfo();
             const tempFolder = await fs.getTemporaryFolder();
@@ -74,10 +76,10 @@ class PhotoshopHost {
             let tempDoc = null;
             try {
                 // 1. Export Main Asset
+                console.log(`Exporting ${info.type}...`);
                 if (info.type === "smartObject") {
                     await action.batchPlay([{ _obj: "placedLayerExportContents", null: { _path: assetToken } }], {});
                 } else if (info.type === "shape") {
-                    // Export Shape as PSD to preserve vectors
                     await action.batchPlay([{
                         _obj: "make",
                         _target: [{ _ref: "document" }],
@@ -101,6 +103,7 @@ class PhotoshopHost {
                 }
 
                 assetBuffer = await assetFile.read({ format: uxp.storage.formats.binary });
+                console.log("Main asset binary captured.");
 
                 // 2. Export Thumbnail
                 if (!tempDoc) {
@@ -123,8 +126,14 @@ class PhotoshopHost {
                 }], {});
 
                 thumbBuffer = await thumbFile.read({ format: uxp.storage.formats.binary });
+                console.log("Thumbnail binary captured.");
 
+            } catch (e) {
+                console.error("Capture Logic Fail", e);
+                throw e;
             } finally {
+                // SAFETY DELAY before deletion (important for Mac filesystem race conditions)
+                await new Promise(r => setTimeout(r, 200));
                 if (tempDoc) try { await tempDoc.closeWithoutSaving(); } catch(e) {}
                 try { await assetFile.delete(); } catch(e) {}
                 try { await thumbFile.delete(); } catch(e) {}
@@ -156,19 +165,15 @@ class PhotoshopHost {
 
         await this.ps.core.executeAsModal(async () => {
             if (metadata.type === "shape") {
-                // SPECIAL IMPORT: Duplicate layer from PSD to stay native
                 const tempDoc = await app.open(tempFile);
                 const layer = tempDoc.activeLayers[0];
-                
                 await action.batchPlay([{
                     _obj: "duplicate",
                     _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
                     to: { _ref: "document", _id: initialDoc.id }
                 }], {});
-                
                 await tempDoc.closeWithoutSaving();
             } else {
-                // STANDARD IMPORT: Place as Smart Object
                 await action.batchPlay([{
                     _obj: "placeEvent",
                     null: { _path: fileToken },

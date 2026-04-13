@@ -11,12 +11,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const breadcrumb = document.getElementById("breadcrumb");
     const header = document.getElementById("header");
     
-    // SAVE PICKER
     const pickerOverlay = document.getElementById("picker-overlay");
     const pickerList = document.getElementById("picker-list");
     const cancelPicker = document.getElementById("cancel-picker");
 
-    // NEW FOLDER MODAL
     const folderOverlay = document.getElementById("folder-overlay");
     const folderNameInput = document.getElementById("folder-name-input");
     const confirmFolder = document.getElementById("confirm-folder");
@@ -28,48 +26,37 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (statusBar) statusBar.innerText = "• " + msg;
     }
 
-    // DYNAMIC LAYOUT ADJUSTER (With Safety Fallback)
     function adjustLayout() {
         try {
             if (!header || !assetGrid) return;
             const headerHeight = header.offsetHeight || 140;
             const topMargin = 24; 
             assetGrid.style.top = (headerHeight + topMargin) + "px";
-        } catch (e) {
-            console.warn("Layout adjust fail", e);
-        }
+        } catch (e) {}
     }
 
-    // Safety check for ResizeObserver compatibility
     if (typeof ResizeObserver !== "undefined") {
         try {
             const resizeObserver = new ResizeObserver(adjustLayout);
             resizeObserver.observe(header);
-        } catch (e) { console.warn("Observer fail"); }
+        } catch (e) {}
     }
     window.addEventListener("resize", adjustLayout);
 
-    // Initialize Storage
     try {
-        updateStatus("Loading...");
-        const success = await window.storageManager.init();
-        if (!success) {
-            updateStatus("Storage Fail");
-            alert("Storage failed to initialize. Please check permissions.");
-        }
+        updateStatus("Loading Storage...");
+        await window.storageManager.init();
         await refreshList();
     } catch (e) {
-        updateStatus("Init Error");
-        alert("Startup Error: " + e.message);
+        updateStatus("Error Init");
     }
 
     async function refreshList() {
         try {
             const assets = await window.storageManager.getAssets();
             const folders = await window.storageManager.getFolders();
-            const query = (searchInput.value || "").toLowerCase();
+            const query = (searchInput.value || "").trim().toLowerCase();
 
-            // Navigation Update
             if (currentFolderId) {
                 const folder = folders.find(f => f.id === currentFolderId);
                 breadcrumb.innerText = "Library > " + (folder ? folder.name : "Folder");
@@ -85,7 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (query) {
                 displayFolders = folders.filter(f => f.name.toLowerCase().includes(query));
                 displayAssets = assets.filter(a => a.name.toLowerCase().includes(query));
-                breadcrumb.innerText = "Search";
+                breadcrumb.innerText = "Search Result";
                 backBtn.style.display = "block";
             } else {
                 if (currentFolderId === null) {
@@ -104,7 +91,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             let html = "";
             const placeholder = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
-            // FOLDERS
             displayFolders.forEach(folder => {
                 html += `
                     <div class="list-item folder-item" id="item-${folder.id}">
@@ -115,7 +101,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 `;
             });
 
-            // ASSETS
             displayAssets.forEach(asset => {
                 html += `
                     <div class="list-item" id="item-${asset.id}">
@@ -129,10 +114,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
             assetGrid.innerHTML = html;
-            updateStatus(query ? `Searching...` : `Ready`);
+            updateStatus(query ? `Filtered` : `Ready`);
             adjustLayout();
 
-            // Click Events (Delegation)
             assetGrid.onclick = async (e) => {
                 const delBtn = e.target.closest(".item-del-btn");
                 if (delBtn) {
@@ -146,7 +130,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
             };
 
-            // Double Clicks
             [...displayFolders, ...displayAssets].forEach(item => {
                 const dom = document.getElementById(`item-${item.id}`);
                 if (!dom) return;
@@ -170,21 +153,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
         } catch (e) {
-            updateStatus("Refresh Error");
-            console.error(e);
+            updateStatus("Error Refresh");
         }
     }
 
-    // BUTTONS
     newFolderBtn.onclick = () => {
         folderNameInput.value = "";
         folderOverlay.style.display = "flex";
         folderNameInput.focus();
     };
 
-    cancelFolder.onclick = () => {
-        folderOverlay.style.display = "none";
-    };
+    cancelFolder.onclick = () => folderOverlay.style.display = "none";
 
     confirmFolder.onclick = async () => {
         const name = folderNameInput.value.trim();
@@ -211,25 +190,30 @@ document.addEventListener("DOMContentLoaded", async () => {
                     await triggerSave(fId);
                 }
             };
-        } catch (e) { alert("Save Error: " + e.message); }
+        } catch (e) { updateStatus("Save Error"); }
     };
 
     cancelPicker.onclick = () => pickerOverlay.style.display = "none";
-
-    backBtn.onclick = async () => {
-        currentFolderId = null;
-        await refreshList();
-    };
+    backBtn.onclick = () => { currentFolderId = null; refreshList(); };
 
     async function triggerSave(folderId) {
-        updateStatus("Saving...");
+        updateStatus("Step 1: Capturing...");
         try {
-            const { thumbBuffer, assetBuffer, metadata } = await window.psHost.extractAssetData();
+            const data = await window.psHost.extractAssetData();
+            if (!data || !data.assetBuffer) throw new Error("Capture fail");
+            
+            updateStatus("Step 2: Writing to disk...");
             const id = Date.now().toString();
-            await window.storageManager.saveAsset({id, name: metadata.name, folderId}, assetBuffer, thumbBuffer);
-            updateStatus("Saved!");
+            await window.storageManager.saveAsset({id, name: data.metadata.name, folderId, metadata: data.metadata}, data.assetBuffer, data.thumbBuffer);
+            
+            updateStatus("Step 3: Updating view...");
             await refreshList();
-        } catch (e) { alert("Save Fail: " + e.message); }
+            updateStatus("Saved Successfully!");
+        } catch (e) { 
+            console.error(e);
+            updateStatus("FAILED to Save Selection");
+            alert("Save Failed: " + e.message);
+        }
     }
 
     async function importAsset(asset) {
