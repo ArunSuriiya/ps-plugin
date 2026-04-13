@@ -11,10 +11,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     const breadcrumb = document.getElementById("breadcrumb");
     const header = document.getElementById("header");
     
-    // Picker Elements
+    // SAVE PICKER
     const pickerOverlay = document.getElementById("picker-overlay");
     const pickerList = document.getElementById("picker-list");
     const cancelPicker = document.getElementById("cancel-picker");
+
+    // NEW FOLDER MODAL
+    const folderOverlay = document.getElementById("folder-overlay");
+    const folderNameInput = document.getElementById("folder-name-input");
+    const confirmFolder = document.getElementById("confirm-folder");
+    const cancelFolder = document.getElementById("cancel-folder");
 
     let currentFolderId = null;
 
@@ -22,26 +28,39 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (statusBar) statusBar.innerText = "• " + msg;
     }
 
-    // DYNAMIC LAYOUT ADJUSTER (Fixes the "Overlap" when header wraps)
+    // DYNAMIC LAYOUT ADJUSTER (With Safety Fallback)
     function adjustLayout() {
-        if (!header || !assetGrid) return;
-        const headerHeight = header.offsetHeight;
-        const topMargin = 24; // Status bar height
-        assetGrid.style.top = (headerHeight + topMargin) + "px";
+        try {
+            if (!header || !assetGrid) return;
+            const headerHeight = header.offsetHeight || 140;
+            const topMargin = 24; 
+            assetGrid.style.top = (headerHeight + topMargin) + "px";
+        } catch (e) {
+            console.warn("Layout adjust fail", e);
+        }
     }
 
-    // Measure every time the window resizes or buttons wrap
+    // Safety check for ResizeObserver compatibility
+    if (typeof ResizeObserver !== "undefined") {
+        try {
+            const resizeObserver = new ResizeObserver(adjustLayout);
+            resizeObserver.observe(header);
+        } catch (e) { console.warn("Observer fail"); }
+    }
     window.addEventListener("resize", adjustLayout);
-    const resizeObserver = new ResizeObserver(adjustLayout);
-    resizeObserver.observe(header);
 
     // Initialize Storage
     try {
         updateStatus("Loading...");
-        await window.storageManager.init();
+        const success = await window.storageManager.init();
+        if (!success) {
+            updateStatus("Storage Fail");
+            alert("Storage failed to initialize. Please check permissions.");
+        }
         await refreshList();
     } catch (e) {
-        updateStatus("Error: " + e.message);
+        updateStatus("Init Error");
+        alert("Startup Error: " + e.message);
     }
 
     async function refreshList() {
@@ -53,7 +72,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             // Navigation Update
             if (currentFolderId) {
                 const folder = folders.find(f => f.id === currentFolderId);
-                breadcrumb.innerText = "Library > " + (folder ? folder.name : "");
+                breadcrumb.innerText = "Library > " + (folder ? folder.name : "Folder");
                 backBtn.style.display = "block";
             } else {
                 breadcrumb.innerText = "Main Library";
@@ -66,7 +85,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (query) {
                 displayFolders = folders.filter(f => f.name.toLowerCase().includes(query));
                 displayAssets = assets.filter(a => a.name.toLowerCase().includes(query));
-                breadcrumb.innerText = "Search Results";
+                breadcrumb.innerText = "Search";
                 backBtn.style.display = "block";
             } else {
                 if (currentFolderId === null) {
@@ -110,10 +129,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
             assetGrid.innerHTML = html;
-            updateStatus(query ? `Filtering...` : `Ready`);
+            updateStatus(query ? `Searching...` : `Ready`);
             adjustLayout();
 
-            // Event Delegation
+            // Click Events (Delegation)
             assetGrid.onclick = async (e) => {
                 const delBtn = e.target.closest(".item-del-btn");
                 if (delBtn) {
@@ -127,7 +146,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 }
             };
 
-            // Card Click Events
+            // Double Clicks
             [...displayFolders, ...displayAssets].forEach(item => {
                 const dom = document.getElementById(`item-${item.id}`);
                 if (!dom) return;
@@ -151,49 +170,66 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
 
         } catch (e) {
-            updateStatus("Error Refreshing");
+            updateStatus("Refresh Error");
+            console.error(e);
         }
     }
 
-    newFolderBtn.onclick = async () => {
-        const name = prompt("Folder Name:");
+    // BUTTONS
+    newFolderBtn.onclick = () => {
+        folderNameInput.value = "";
+        folderOverlay.style.display = "flex";
+        folderNameInput.focus();
+    };
+
+    cancelFolder.onclick = () => {
+        folderOverlay.style.display = "none";
+    };
+
+    confirmFolder.onclick = async () => {
+        const name = folderNameInput.value.trim();
         if (name) {
             await window.storageManager.createFolder(name);
+            folderOverlay.style.display = "none";
             await refreshList();
         }
     };
+
+    saveBtn.onclick = async () => {
+        try {
+            const folders = await window.storageManager.getFolders();
+            let pickerHtml = `<div class="picker-option" data-id="root">🏠 Main Library</div>`;
+            folders.forEach(f => { pickerHtml += `<div class="picker-option" data-id="${f.id}">📂 ${f.name}</div>`; });
+            pickerList.innerHTML = pickerHtml;
+            pickerOverlay.style.display = "flex";
+            
+            pickerList.onclick = async (e) => {
+                const opt = e.target.closest(".picker-option");
+                if (opt) {
+                    const fId = opt.getAttribute("data-id") === "root" ? null : opt.getAttribute("data-id");
+                    pickerOverlay.style.display = "none";
+                    await triggerSave(fId);
+                }
+            };
+        } catch (e) { alert("Save Error: " + e.message); }
+    };
+
+    cancelPicker.onclick = () => pickerOverlay.style.display = "none";
 
     backBtn.onclick = async () => {
         currentFolderId = null;
         await refreshList();
     };
 
-    saveBtn.onclick = async () => {
-        const folders = await window.storageManager.getFolders();
-        let pickerHtml = `<div class="picker-option" data-id="null">🏠 Main Library</div>`;
-        folders.forEach(f => { pickerHtml += `<div class="picker-option" data-id="${f.id}">📂 ${f.name}</div>`; });
-        pickerList.innerHTML = pickerHtml;
-        pickerOverlay.style.display = "flex";
-        
-        pickerList.querySelectorAll(".picker-option").forEach(opt => {
-            opt.onclick = async () => {
-                const fId = opt.getAttribute("data-id") === "null" ? null : opt.getAttribute("data-id");
-                pickerOverlay.style.display = "none";
-                await triggerSave(fId);
-            };
-        });
-    };
-
-    cancelPicker.onclick = () => pickerOverlay.style.display = "none";
-
     async function triggerSave(folderId) {
         updateStatus("Saving...");
         try {
             const { thumbBuffer, assetBuffer, metadata } = await window.psHost.extractAssetData();
-            await window.storageManager.saveAsset({id: Date.now().toString(), name: metadata.name, folderId}, assetBuffer, thumbBuffer);
+            const id = Date.now().toString();
+            await window.storageManager.saveAsset({id, name: metadata.name, folderId}, assetBuffer, thumbBuffer);
             updateStatus("Saved!");
             await refreshList();
-        } catch (e) { alert(e.message); }
+        } catch (e) { alert("Save Fail: " + e.message); }
     }
 
     async function importAsset(asset) {

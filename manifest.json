@@ -23,11 +23,11 @@
       },
       "minimumSize": {
         "width": 300,
-        "height": 500
+        "height": 600
       },
       "preferredSize": {
         "width": 350,
-        "height": 700
+        "height": 900
       }
     }
   ],

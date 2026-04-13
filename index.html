@@ -30,7 +30,7 @@
             background: #222;
             padding: 12px;
             border-bottom: 1px solid #444;
-            height: auto; /* Dynamic height for wrapping buttons */
+            height: auto; 
             min-height: 140px;
             box-sizing: border-box;
             position: absolute;
@@ -39,13 +39,13 @@
         }
         .action-row {
             display: flex;
-            flex-wrap: wrap; /* RESPONSIVE WRAPPING */
+            flex-wrap: wrap; 
             gap: 8px;
             margin-top: 10px;
         }
         .btn-save {
             background: #3a86ff;
-            flex: 1 1 140px; /* Grow/Shrink, base width 140px */
+            flex: 1 1 140px;
             color: white;
             border: none;
             padding: 10px;
@@ -57,7 +57,7 @@
         }
         .btn-folder {
             background: #444;
-            flex: 1 1 100px; /* Grow/Shrink, base width 100px */
+            flex: 1 1 100px;
             color: white;
             border: none;
             padding: 10px;
@@ -87,7 +87,7 @@
         /* THE RESPONSIVE FLUID GRID */
         #asset-grid {
             position: absolute;
-            top: 165px; /* Adjust if header grows */
+            top: 165px; 
             bottom: 0px; 
             left: 0; right: 0;
             overflow-y: auto;
@@ -108,24 +108,20 @@
             border: 1px solid #444;
             border-radius: 12px;
             display: flex;
-            flex-direction: column; /* Vertical card for grid */
+            flex-direction: column;
             padding: 0;
             position: relative;
             cursor: pointer;
             overflow: hidden;
             height: 160px;
-            transition: transform 0.15s ease-in-out;
         }
-        .list-item:hover { 
-            background: #333 !important;
-            transform: translateY(-2px);
-        }
+        .list-item:hover { background: #333 !important; }
         
         .folder-item {
             border: 2px solid #3a86ff !important;
             background: #1e2a3b !important;
-            height: 60px; /* Smaller height for folders */
-            flex-direction: row !important; /* Folders stay list-like even in grid */
+            height: 60px;
+            flex-direction: row !important;
         }
         .folder-item .item-thumb {
             width: 40px; height: 100%; margin: 0; border: none; background: transparent;
@@ -172,11 +168,10 @@
             cursor: pointer;
             font-size: 12px;
             z-index: 100;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
-        /* PICKER OVERLAY */
-        #picker-overlay {
+        /* OVERLAY SYSTEM */
+        .overlay {
             position: fixed;
             inset: 0;
             background: rgba(0,0,0,0.85);
@@ -187,20 +182,38 @@
             justify-content: center;
             padding: 20px;
         }
-        .picker-box {
+        .modal-box {
             background: #222;
             border: 1px solid #444;
             border-radius: 12px;
             width: 95%; max-width: 300px;
-            padding: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        .picker-title { font-weight: bold; margin-bottom: 15px; text-align: center; }
+        .modal-title { font-weight: bold; margin-bottom: 20px; text-align: center; color: #3a86ff; }
+        
+        /* PICKER LIST */
         .picker-option {
             background: #333; padding: 12px; margin-bottom: 8px; border-radius: 8px;
             cursor: pointer; text-align: center; font-size: 13px;
         }
         .picker-option:hover { background: #3a86ff; }
-        .cancel-btn { margin-top: 10px; color: #888; cursor: pointer; text-align: center; font-size: 12px; }
+
+        /* FOLDER INPUT */
+        .modal-input {
+            background: #000; border: 1px solid #444; color: white;
+            width: 100%; padding: 10px; border-radius: 6px; margin-bottom: 20px;
+            box-sizing: border-box; outline: none;
+        }
+        .modal-row { display: flex; gap: 8px; }
+        .btn-primary { 
+            background: #3a86ff; color: white; border: none; flex: 1;
+            padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;
+        }
+        .btn-cancel { 
+            background: #444; color: #ccc; border: none; flex: 1;
+            padding: 10px; border-radius: 6px; cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -224,11 +237,24 @@
         <!-- RESPONSIVE GRID CONTENT -->
     </div>
 
-    <div id="picker-overlay">
-        <div class="picker-box">
-            <div class="picker-title">Save to...</div>
+    <!-- SAVE PICKER OVERLAY -->
+    <div class="overlay" id="picker-overlay">
+        <div class="modal-box">
+            <div class="modal-title">Save to Folder...</div>
             <div id="picker-list"></div>
-            <div class="cancel-btn" id="cancel-picker">Cancel</div>
+            <div class="btn-cancel" style="margin-top:10px; text-align:center; padding:8px;" id="cancel-picker">Cancel</div>
+        </div>
+    </div>
+
+    <!-- NEW FOLDER MODAL OVERLAY -->
+    <div class="overlay" id="folder-overlay">
+        <div class="modal-box">
+            <div class="modal-title">Create New Folder</div>
+            <input type="text" id="folder-name-input" class="modal-input" placeholder="Folder name...">
+            <div class="modal-row">
+                <button class="btn-cancel" id="cancel-folder">Cancel</button>
+                <button class="btn-primary" id="confirm-folder">Create</button>
+            </div>
         </div>
     </div>
 
