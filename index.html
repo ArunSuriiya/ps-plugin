@@ -172,7 +172,7 @@
             width: 100%;
             box-sizing: border-box;
         }
-        /* ROUNDED RED DELETE BUTTON */
+        /* ROUNDED RED DELETE BUTTON - HOVER TO SHOW */
         .item-del-btn {
             position: absolute;
             top: 6px; right: 6px;
@@ -189,11 +189,24 @@
             font-weight: bold;
             z-index: 100;
             box-shadow: 0 2px 6px rgba(0,0,0,0.5);
-            transition: all 0.2s;
+            transition: all 0.2s ease;
+            
+            /* HIDDEN BY DEFAULT */
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.8);
         }
+        
+        /* SHOW ON HOVER */
+        .list-item:hover .item-del-btn {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
+
         .item-del-btn:hover {
             background: #d70015;
-            transform: scale(1.1);
+            transform: scale(1.1) !important;
         }
 
         /* OVERLAY SYSTEM - PERFECT CENTERING */
