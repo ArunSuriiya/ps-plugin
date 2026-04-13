@@ -1,0 +1,16 @@
+# MacOS
+.DS_Store
+
+# UXP & Developer Tools
+.vs/
+.vscode/
+.idea/
+*.log
+npm-debug.log*
+
+# Build / Plugins
+dist/
+node_modules/
+
+# Local state (where images are stored, usually in a different path but good to exclude if copied)
+LocalState/
