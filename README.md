@@ -13,19 +13,26 @@ This is the easiest way to install on **both Mac and Windows**.
 2.  **Double-click** the file.
 3.  Adobe Creative Cloud Desktop will open and handle the installation.
 
-### Option 2: Developer Mode (Mac & Windows)
+### Option 2: Windows One-Click (No Creative Cloud Required)
+Use this if you don't have the Creative Cloud desktop app or want a faster install on Windows.
+
+1.  Download this repository as a ZIP and extract it.
+2.  Double-click **`Install_Windows.bat`**.
+3.  Confirm the installation and restart Photoshop.
+
+### Option 3: Developer Mode (Mac & Windows)
 Recommended if you want to modify or debug the plugin.
 
 1.  **Install Tool**: Install the [Adobe UXP Developer Tool](https://developer.adobe.com/photoshop/uxp/devtool/) from Creative Cloud.
 2.  **Add Plugin**: Open the tool, click **"Add Plugin"**, and select the `manifest.json` from this repository.
 3.  **Load**: Ensure Photoshop is open, then click **"Load"** in the tool.
 
-### Option 3: Manual Installation
+### Option 4: Manual Installation
 If you prefer to "paste" the folder manually:
 
-- **Windows Path**:
+- **Windows path**:
   Press `Win + R`, paste `%AppData%\Adobe\UXP\Plugins\`, and drop the folder inside.
-- **Mac Path**:
+- **Mac path**:
   Press `Cmd + Shift + G`, paste `~/Library/Application Support/Adobe/UXP/Plugins/`, and drop the folder inside.
 
 ---
@@ -41,7 +48,7 @@ If you prefer to "paste" the folder manually:
 ---
 
 ## ⚠️ Troubleshooting
-- **Black Screen**: Go to the UXP Developer Tool and click **Reload**.
+- **Black Screen**: Go to the UWP Developer Tool and click **Reload**.
 - **Windows Missing Folder**: Ensure you are looking in `Roaming` AppData, not `Local`.
 - **Mac Permissions**: Ensure Photoshop has "Full Disk Access" in System Settings.
 

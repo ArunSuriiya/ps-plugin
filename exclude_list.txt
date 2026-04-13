@@ -1,0 +1,9 @@
+.git\
+.DS_Store
+Asset_Library.ccx
+Asset_Library_v1.0.0.zip
+Install_Windows.bat
+exclude_list.txt
+walkthrough_
+implementation_plan
+task.md
