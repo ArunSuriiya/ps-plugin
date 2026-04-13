@@ -22,12 +22,12 @@
         "default": "Asset Library"
       },
       "minimumSize": {
-        "width": 250,
-        "height": 400
+        "width": 300,
+        "height": 500
       },
       "preferredSize": {
-        "width": 300,
-        "height": 600
+        "width": 350,
+        "height": 700
       }
     }
   ],
