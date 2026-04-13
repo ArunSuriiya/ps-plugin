@@ -20,6 +20,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const confirmFolder = document.getElementById("confirm-folder");
     const cancelFolder = document.getElementById("cancel-folder");
 
+    const deleteOverlay = document.getElementById("delete-overlay");
+    const deleteMsg = document.getElementById("delete-msg");
+    const deleteConfirm = document.getElementById("delete-confirm");
+    const deleteCancel = document.getElementById("delete-cancel");
+
     let currentFolderId = null;
 
     function updateStatus(msg) {
@@ -50,6 +55,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) {
         updateStatus("Init Error");
     }
+
+    // CUSTOM PROMISE-BASED CONFIRMATION
+    let deleteResolver = null;
+    function showDeleteModal(name) {
+        deleteMsg.innerText = `Are you sure you want to delete "${name}"? This cannot be undone.`;
+        deleteOverlay.style.display = "flex";
+        return new Promise(resolve => {
+            deleteResolver = resolve;
+        });
+    }
+
+    deleteConfirm.onclick = () => {
+        deleteOverlay.style.display = "none";
+        if (deleteResolver) deleteResolver(true);
+    };
+    deleteCancel.onclick = () => {
+        deleteOverlay.style.display = "none";
+        if (deleteResolver) deleteResolver(false);
+    };
 
     async function refreshList() {
         try {
@@ -92,18 +116,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             let html = "";
             const placeholder = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
-            // FOLDERS
             displayFolders.forEach(folder => {
                 html += `
                     <div class="list-item folder-item" id="item-${folder.id}">
                         <div class="item-thumb" style="font-size:24px;">📁</div>
                         <div class="item-name">${folder.name}</div>
-                        <button class="item-del-btn" id="del-${folder.id}" data-id="${folder.id}">✕</button>
+                        <button class="item-del-btn" id="del-${folder.id}">✕</button>
                     </div>
                 `;
             });
 
-            // ASSETS
             displayAssets.forEach(asset => {
                 html += `
                     <div class="list-item" id="item-${asset.id}">
@@ -111,7 +133,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             <img id="img-${asset.id}" src="${placeholder}">
                         </div>
                         <div class="item-name">${asset.name || "Untitled"}</div>
-                        <button class="item-del-btn" id="del-${asset.id}" data-id="${asset.id}">✕</button>
+                        <button class="item-del-btn" id="del-${asset.id}">✕</button>
                     </div>
                 `;
             });
@@ -120,16 +142,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             updateStatus(query ? `Filtered` : `Ready`);
             adjustLayout();
 
-            // REPLACEMENT: Use Direct Listeners instead of delegation for buttons
             [...displayFolders, ...displayAssets].forEach(item => {
                 const delBtn = document.getElementById(`del-${item.id}`);
                 const card = document.getElementById(`item-${item.id}`);
 
                 if (delBtn) {
                     delBtn.onclick = async (e) => {
-                        e.stopPropagation(); // Prevent card double-click
-                        console.log("Delete clicked for:", item.id);
-                        if (confirm(`Permanently delete "${item.name}"?`)) {
+                        e.stopPropagation();
+                        console.log("Custom Delete requested for:", item.id);
+                        if (await showDeleteModal(item.name)) {
                             updateStatus("Deleting...");
                             if (item.id.startsWith("folder_")) await window.storageManager.deleteFolder(item.id);
                             else await window.storageManager.deleteAsset(item.id);

@@ -114,7 +114,7 @@
             position: relative;
             cursor: pointer;
             overflow: hidden;
-            width: calc(50% - 6px); /* FORCES 2 COLUMNS (50% minus half the 12px gap) */
+            width: calc(50% - 6px); /* FORCES 2 COLUMNS */
             height: 160px;
             transition: transform 0.1s;
         }
@@ -129,10 +129,10 @@
             background: #1e2a3b !important;
             height: 50px !important;
             flex-direction: row !important;
-            width: 100% !important; /* Spans full flex width */
+            width: 100% !important; 
             padding: 0 10px;
             align-items: center;
-            transform: none !important; /* Folders don't scale */
+            transform: none !important;
         }
         .folder-item .item-thumb {
             width: 35px !important; height: 100% !important; 
@@ -217,6 +217,10 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
         .modal-title { font-weight: bold; margin-bottom: 20px; text-align: center; color: #3a86ff; }
+        .modal-desc { 
+            color: #ccc; font-size: 13px; text-align: center; margin-bottom: 20px;
+            line-height: 1.4;
+        }
         
         .picker-option {
             background: #333; padding: 12px; margin-bottom: 8px; border-radius: 8px;
@@ -229,9 +233,13 @@
             width: 100%; padding: 10px; border-radius: 6px; margin-bottom: 20px;
             box-sizing: border-box; outline: none;
         }
-        .modal-row { display: flex; gap: 8px; }
+        .modal-row { display: flex; gap: 10px; width: 100%; }
         .btn-primary { 
             background: #3a86ff; color: white; border: none; flex: 1;
+            padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;
+        }
+        .btn-danger {
+            background: #ff3b30; color: white; border: none; flex: 1;
             padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;
         }
         .btn-cancel { 
@@ -261,6 +269,19 @@
         <!-- FLEXBOX GRID CONTENT -->
     </div>
 
+    <!-- DELETE CONFIRMATION OVERLAY -->
+    <div class="overlay" id="delete-overlay">
+        <div class="modal-box">
+            <div class="modal-title" style="color:#ff3b30">Delete Permanently?</div>
+            <div class="modal-desc" id="delete-msg">Are you sure you want to delete this item? This cannot be undone.</div>
+            <div class="modal-row">
+                <button class="btn-cancel" id="delete-cancel">Cancel</button>
+                <button class="btn-danger" id="delete-confirm">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAVE PICKER OVERLAY -->
     <div class="overlay" id="picker-overlay">
         <div class="modal-box">
             <div class="modal-title">Save to Folder...</div>
@@ -269,6 +290,7 @@
         </div>
     </div>
 
+    <!-- NEW FOLDER MODAL OVERLAY -->
     <div class="overlay" id="folder-overlay">
         <div class="modal-box">
             <div class="modal-title">Create New Folder</div>
