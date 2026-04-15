@@ -18,20 +18,20 @@ class PhotoshopHost {
         }
 
         const layer = activeDoc.activeLayers[0];
+        // FIX 1: Removed synchronousExecution:true — caused hangs on some layers
         const result = await action.batchPlay([
             {
                 _obj: "get",
                 _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
                 _options: { dialogOptions: "dontDisplay" }
             }
-        ], { synchronousExecution: true });
+        ], {});
 
         if (!result || !result[0]) throw new Error("Layer info fail");
-        const desc = result[0];
-        
+
         let extension = "png";
         let type = "raster";
-        
+
         const kindStr = layer.kind.toString();
         if (kindStr.includes("SOLIDFILL")) {
             extension = "psd";
@@ -56,7 +56,7 @@ class PhotoshopHost {
         const { app, core, action } = this.ps;
         const uxp = require('uxp');
         const fs = uxp.storage.localFileSystem;
-        
+
         let thumbBuffer = null;
         let assetBuffer = null;
         let info = null;
@@ -66,14 +66,18 @@ class PhotoshopHost {
         await core.executeAsModal(async () => {
             info = await this.getSelectedLayerInfo();
             const tempFolder = await fs.getTemporaryFolder();
-            
+
             const assetFile = await tempFolder.createFile(`asset_${Date.now()}.${info.extension}`, { overwrite: true });
             const assetToken = await fs.createSessionToken(assetFile);
 
             const thumbFile = await tempFolder.createFile(`thumb_${Date.now()}.png`, { overwrite: true });
             const thumbToken = await fs.createSessionToken(thumbFile);
 
-            let tempDoc = null;
+            // FIX 2: Track ALL created temp docs in an array (original only tracked one,
+            // but two docs can be created — one for asset, one for thumbnail —
+            // leaving a dangling open doc that corrupts PS state on exit/crash)
+            const tempDocs = [];
+
             try {
                 // 1. Export Main Asset
                 console.log(`Exporting ${info.type}...`);
@@ -85,7 +89,7 @@ class PhotoshopHost {
                         _target: [{ _ref: "document" }],
                         using: { _ref: "layer", _enum: "ordinal", _value: "targetEnum" }
                     }], {});
-                    tempDoc = app.activeDocument;
+                    tempDocs.push(app.activeDocument);
                     await action.batchPlay([{ _obj: "save", as: { _obj: "photoshop35Format" }, in: { _path: assetToken } }], {});
                 } else {
                     await action.batchPlay([{
@@ -93,12 +97,18 @@ class PhotoshopHost {
                         _target: [{ _ref: "document" }],
                         using: { _ref: "layer", _enum: "ordinal", _value: "targetEnum" }
                     }], {});
-                    tempDoc = app.activeDocument;
-                    await action.batchPlay([{ _obj: "trim", trimFreePixels: true }], {});
-                    await action.batchPlay([{ 
-                        _obj: "save", 
-                        as: { _obj: "PNGFormat", method: { _enum: "PNGMethod", _value: "quick" } }, 
-                        in: { _path: assetToken } 
+                    tempDocs.push(app.activeDocument);
+                    // FIX 3: Wrap trim in try/catch — it throws on certain layer types
+                    // causing the whole modal to fail and leave the temp doc open
+                    try {
+                        await action.batchPlay([{ _obj: "trim", trimFreePixels: true }], {});
+                    } catch (trimErr) {
+                        console.warn("Trim skipped (non-fatal):", trimErr.message);
+                    }
+                    await action.batchPlay([{
+                        _obj: "save",
+                        as: { _obj: "PNGFormat", method: { _enum: "PNGMethod", _value: "quick" } },
+                        in: { _path: assetToken }
                     }], {});
                 }
 
@@ -106,18 +116,26 @@ class PhotoshopHost {
                 console.log("Main asset binary captured.");
 
                 // 2. Export Thumbnail
-                if (!tempDoc) {
+                if (tempDocs.length === 0) {
+                    // smartObject path — create a doc for thumbnail
                     await action.batchPlay([{
                         _obj: "make",
                         _target: [{ _ref: "document" }],
                         using: { _ref: "layer", _id: info.id }
                     }], {});
-                    tempDoc = app.activeDocument;
+                    tempDocs.push(app.activeDocument);
                 }
 
+                const thumbDoc = tempDocs[tempDocs.length - 1];
                 const thumbSize = 250;
-                const scale = Math.min(thumbSize / tempDoc.width, thumbSize / tempDoc.height, 1);
-                if (scale < 1) await tempDoc.resizeImage(tempDoc.width * scale, tempDoc.height * scale);
+                const scale = Math.min(thumbSize / thumbDoc.width, thumbSize / thumbDoc.height, 1);
+                if (scale < 1) {
+                    try {
+                        await thumbDoc.resizeImage(thumbDoc.width * scale, thumbDoc.height * scale);
+                    } catch (e) {
+                        console.warn("Resize skipped:", e.message);
+                    }
+                }
 
                 await action.batchPlay([{
                     _obj: "save",
@@ -132,11 +150,13 @@ class PhotoshopHost {
                 console.error("Capture Logic Fail", e);
                 throw e;
             } finally {
-                // SAFETY DELAY before deletion (important for Mac filesystem race conditions)
-                await new Promise(r => setTimeout(r, 200));
-                if (tempDoc) try { await tempDoc.closeWithoutSaving(); } catch(e) {}
-                try { await assetFile.delete(); } catch(e) {}
-                try { await thumbFile.delete(); } catch(e) {}
+                // FIX 2 (cont): Close ALL tracked temp docs, not just the last one
+                await new Promise(r => setTimeout(r, 300));
+                for (const doc of tempDocs) {
+                    try { await doc.closeWithoutSaving(); } catch (e) {}
+                }
+                try { await assetFile.delete(); } catch (e) {}
+                try { await thumbFile.delete(); } catch (e) {}
             }
         }, { "commandName": "Capturing Asset" });
 
@@ -151,10 +171,13 @@ class PhotoshopHost {
         const uxp = require('uxp');
         const fs = uxp.storage.localFileSystem;
         const tempFolder = await fs.getTemporaryFolder();
-        
-        const metadata = assetMetadata.metadata || {};
+
+        // FIX 4: Defensive metadata access — was crashing with
+        // "Cannot read properties of undefined (reading 'extension')"
+        // when assetMetadata.metadata was undefined
+        const metadata = (assetMetadata && assetMetadata.metadata) ? assetMetadata.metadata : (assetMetadata || {});
         const extension = metadata.extension || "png";
-        
+
         const tempFile = await tempFolder.createFile(`temp_import.${extension}`, { overwrite: true });
         const fileToken = await fs.createSessionToken(tempFile);
         await tempFile.write(binaryData, { format: uxp.storage.formats.binary });
@@ -164,22 +187,33 @@ class PhotoshopHost {
         if (!initialDoc) throw new Error("No active document");
 
         await this.ps.core.executeAsModal(async () => {
-            if (metadata.type === "shape") {
-                const tempDoc = await app.open(tempFile);
-                const layer = tempDoc.activeLayers[0];
-                await action.batchPlay([{
-                    _obj: "duplicate",
-                    _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
-                    to: { _ref: "document", _id: initialDoc.id }
-                }], {});
-                await tempDoc.closeWithoutSaving();
-            } else {
-                await action.batchPlay([{
-                    _obj: "placeEvent",
-                    null: { _path: fileToken },
-                    linked: false,
-                    display: { _obj: "placeDisplay", offset: { _obj: "point", horizontal: 0, vertical: 0 } }
-                }], {});
+            const tempDocs = [];
+            try {
+                if (metadata.type === "shape") {
+                    const tempDoc = await app.open(tempFile);
+                    if (tempDoc) tempDocs.push(tempDoc);
+                    await action.batchPlay([{
+                        _obj: "duplicate",
+                        _target: [{ _ref: "layer", _enum: "ordinal", _value: "targetEnum" }],
+                        to: { _ref: "document", _id: initialDoc.id }
+                    }], {});
+                } else {
+                    await action.batchPlay([{
+                        _obj: "placeEvent",
+                        null: { _path: fileToken },
+                        linked: false,
+                        display: { _obj: "placeDisplay", offset: { _obj: "point", horizontal: 0, vertical: 0 } }
+                    }], {});
+                }
+            } catch (e) {
+                console.error("Import action failed:", e.message);
+                throw e;
+            } finally {
+                await new Promise(r => setTimeout(r, 300));
+                for (const doc of tempDocs) {
+                    try { await doc.closeWithoutSaving(); } catch (e) {}
+                }
+                try { await tempFile.delete(); } catch (e) {}
             }
         }, { "commandName": "Importing Asset" });
     }

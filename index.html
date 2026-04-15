@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <style>
         /* FULL RESPONSIVE OVERHAUL - STABLE FLEXBOX VERSION */
-        html, body {
-            margin: 0; padding: 0;
-            width: 100%; height: 100%;
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
             overflow: hidden;
             background-color: #1a1a1a;
             color: #fff;
@@ -14,6 +18,7 @@
             position: absolute;
             inset: 0;
         }
+
         #status-bar {
             background: #000;
             color: #0f0;
@@ -23,26 +28,33 @@
             height: 24px;
             box-sizing: border-box;
             position: absolute;
-            top: 0; left: 0; right: 0;
+            top: 0;
+            left: 0;
+            right: 0;
             z-index: 100;
         }
+
         #header {
             background: #222;
             padding: 12px;
             border-bottom: 1px solid #444;
-            height: auto; 
+            height: auto;
             min-height: 140px;
             box-sizing: border-box;
             position: absolute;
-            top: 24px; left: 0; right: 0;
+            top: 24px;
+            left: 0;
+            right: 0;
             z-index: 90;
         }
+
         .action-row {
             display: flex;
-            flex-wrap: wrap; 
+            flex-wrap: wrap;
             gap: 8px;
             margin-top: 10px;
         }
+
         .btn-save {
             background: #3a86ff;
             flex: 1 1 140px;
@@ -55,6 +67,7 @@
             font-size: 12px;
             text-align: center;
         }
+
         .btn-folder {
             background: #444;
             flex: 1 1 100px;
@@ -66,6 +79,7 @@
             font-size: 12px;
             text-align: center;
         }
+
         #nav-bar {
             display: flex;
             align-items: center;
@@ -74,6 +88,7 @@
             margin-bottom: 8px;
             height: 20px;
         }
+
         #back-btn {
             background: #555;
             color: white;
@@ -83,18 +98,19 @@
             cursor: pointer;
             display: none;
         }
-        
+
         /* FLEXBOX GRID FOR STABILITY */
         #asset-grid {
             position: absolute;
-            top: 165px; 
-            bottom: 0px; 
-            left: 0; right: 0;
+            top: 165px;
+            bottom: 0px;
+            left: 0;
+            right: 0;
             overflow-y: auto;
             padding: 12px;
             background: #111;
             box-sizing: border-box;
-            
+
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
@@ -114,39 +130,46 @@
             position: relative;
             cursor: pointer;
             overflow: hidden;
-            width: calc(50% - 6px); /* FORCES 2 COLUMNS */
+            width: calc(50% - 6px);
+            /* FORCES 2 COLUMNS */
             height: 160px;
             transition: transform 0.1s;
         }
-        .list-item:hover { 
+
+        .list-item:hover {
             background: #333 !important;
             transform: scale(0.98);
         }
-        
+
         /* FOLDER ITEM - SPAN FULL WIDTH */
         .folder-item {
             border: 2px solid #3a86ff !important;
             background: #1e2a3b !important;
             height: 50px !important;
             flex-direction: row !important;
-            width: 100% !important; 
+            width: 100% !important;
             padding: 0 10px;
             align-items: center;
             transform: none !important;
         }
+
         .folder-item .item-thumb {
-            width: 35px !important; height: 100% !important; 
-            margin: 0 !important; border: none !important; 
+            width: 35px !important;
+            height: 100% !important;
+            margin: 0 !important;
+            border: none !important;
             background: transparent !important;
         }
+
         .folder-item .item-name {
             text-align: left !important;
             padding: 0 0 0 10px !important;
             font-size: 13px !important;
         }
-        
+
         .item-thumb {
-            width: 100%; height: 110px;
+            width: 100%;
+            height: 110px;
             background: #000;
             display: flex;
             align-items: center;
@@ -155,11 +178,13 @@
             border-bottom: 1px solid #333;
             pointer-events: none;
         }
+
         .item-thumb img {
             max-width: 90%;
             max-height: 90%;
             object-fit: contain;
         }
+
         .item-name {
             padding: 8px;
             font-weight: 500;
@@ -172,14 +197,17 @@
             width: 100%;
             box-sizing: border-box;
         }
+
         /* ROUNDED RED DELETE BUTTON - HOVER TO SHOW */
         .item-del-btn {
             position: absolute;
-            top: 6px; right: 6px;
+            top: 6px;
+            right: 6px;
             background: #ff3b30;
             color: white;
             border: 2px solid #fff;
-            width: 26px; height: 26px;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -188,15 +216,15 @@
             font-size: 14px;
             font-weight: bold;
             z-index: 100;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
             transition: all 0.2s ease;
-            
+
             /* HIDDEN BY DEFAULT */
             opacity: 0;
             pointer-events: none;
             transform: scale(0.8);
         }
-        
+
         /* SHOW ON HOVER */
         .list-item:hover .item-del-btn {
             opacity: 1;
@@ -211,75 +239,143 @@
 
         /* OVERLAY SYSTEM - PERFECT CENTERING */
         .overlay {
-            position: absolute; /* Using absolute for better UXP stability */
+            position: absolute;
+            /* Using absolute for better UXP stability */
             inset: 0;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0, 0, 0, 0.85);
             z-index: 200;
             display: none;
             flex-direction: column;
             align-items: center;
-            justify-content: center; /* Vertical centering */
-            padding: 0; /* Remove padding to keep centering precise */
+            justify-content: center;
+            /* Vertical centering */
+            padding: 0;
+            /* Remove padding to keep centering precise */
             width: 100%;
             height: 100%;
         }
+
         .modal-box {
             background: #222;
             border: 1px solid #444;
             border-radius: 16px;
-            width: 85%; max-width: 280px;
+            width: 85%;
+            max-width: 280px;
             padding: 24px;
-            box-shadow: 0 15px 40px rgba(0,0,0,1); /* Deep shadow for focus */
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 1);
+            /* Deep shadow for focus */
             display: flex;
             flex-direction: column;
             align-items: center;
         }
-        .modal-title { font-weight: bold; margin-bottom: 20px; text-align: center; color: #3a86ff; }
-        .modal-desc { 
-            color: #ccc; font-size: 13px; text-align: center; margin-bottom: 20px;
+
+        .modal-title {
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #3a86ff;
+        }
+
+        .modal-desc {
+            color: #ccc;
+            font-size: 13px;
+            text-align: center;
+            margin-bottom: 20px;
             line-height: 1.4;
-            width: 100%; 
-            word-break: break-word; /* Forces long names to wrap */
+            width: 100%;
+            word-break: break-word;
+            /* Forces long names to wrap */
             overflow-wrap: break-word;
             box-sizing: border-box;
         }
-        
+
         .picker-option {
-            background: #333; padding: 12px; margin-bottom: 8px; border-radius: 8px;
-            cursor: pointer; text-align: center; font-size: 13px;
+            background: #333;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 13px;
         }
-        .picker-option:hover { background: #3a86ff; }
+
+        .picker-option:hover {
+            background: #3a86ff;
+        }
 
         .modal-input {
-            background: #000; border: 1px solid #444; color: white;
-            width: 100%; padding: 10px; border-radius: 6px; margin-bottom: 20px;
-            box-sizing: border-box; outline: none;
+            background: #000 !important;
+            border: 1px solid #444;
+            color: #ffffff !important;
+            width: 100%;
+            height: 20px;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            outline: none;
+            font-size: 14px !important;
+            caret-color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
         }
-        .modal-row { display: flex; gap: 10px; width: 100%; }
-        .btn-primary { 
-            background: #3a86ff; color: white; border: none; flex: 1;
-            padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;
+
+        .modal-input::placeholder {
+            color: #888 !important;
+            -webkit-text-fill-color: #888 !important;
         }
+
+        .modal-row {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .btn-primary {
+            background: #3a86ff;
+            color: white;
+            border: none;
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         .btn-danger {
-            background: #ff3b30; color: white; border: none; flex: 1;
-            padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer;
+            background: #ff3b30;
+            color: white;
+            border: none;
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
         }
-        .btn-cancel { 
-            background: #444; color: #ccc; border: none; flex: 1;
-            padding: 10px; border-radius: 6px; cursor: pointer;
+
+        .btn-cancel {
+            background: #444;
+            color: #ccc;
+            border: none;
+            flex: 1;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
         }
     </style>
 </head>
+
 <body>
     <div id="status-bar">• Library Ready</div>
-    
+
     <div id="header">
         <div id="nav-bar">
             <button id="back-btn">← Back</button>
             <span id="breadcrumb">Main Library</span>
         </div>
-        <div style="background:#000; border:1px solid #444; border-radius:4px; padding:2px 2px; display:flex; align-items:center;">
-            <input type="text" id="search" placeholder="Search..." style="background:transparent; border:none; color:white; padding:6px 0; width:100%; outline:none; font-size:13px;">
+        <div
+            style="background:#000; border:1px solid #444; border-radius:4px; padding:2px 2px; display:flex; align-items:center;">
+            <input type="text" id="search" placeholder="Search..."
+                style="background:transparent; border:none; color:white; padding:6px 0; width:100%; outline:none; font-size:13px;">
         </div>
         <div class="action-row">
             <button id="save-btn" class="btn-save">+ SAVE SELECTION</button>
@@ -295,7 +391,8 @@
     <div class="overlay" id="delete-overlay">
         <div class="modal-box">
             <div class="modal-title" style="color:#ff3b30">Delete Permanently?</div>
-            <div class="modal-desc" id="delete-msg">Are you sure you want to delete this item? This cannot be undone.</div>
+            <div class="modal-desc" id="delete-msg">Are you sure you want to delete this item? This cannot be undone.
+            </div>
             <div class="modal-row">
                 <button class="btn-cancel" id="delete-cancel">Cancel</button>
                 <button class="btn-danger" id="delete-confirm">Delete</button>
@@ -308,7 +405,8 @@
         <div class="modal-box">
             <div class="modal-title">Save to Folder...</div>
             <div id="picker-list"></div>
-            <div class="btn-cancel" style="margin-top:10px; text-align:center; padding:8px;" id="cancel-picker">Cancel</div>
+            <div class="btn-cancel" style="margin-top:10px; text-align:center; padding:8px;" id="cancel-picker">Cancel
+            </div>
         </div>
     </div>
 
@@ -328,4 +426,5 @@
     <script src="ps-host.js"></script>
     <script src="main.js"></script>
 </body>
+
 </html>

@@ -2,7 +2,10 @@
 .DS_Store
 Asset_Library.ccx
 Asset_Library_v1.0.0.zip
+AssetLibrary_v1.0.0_Mac.zip
+README.md
 Install_Windows.bat
+Install_Mac.sh
 exclude_list.txt
 walkthrough_
 implementation_plan

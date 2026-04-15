@@ -31,6 +31,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (statusBar) statusBar.innerText = "• " + msg;
     }
 
+    let layoutTimer = null;
     function adjustLayout() {
         try {
             if (!header || !assetGrid) return;
@@ -40,13 +41,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (e) {}
     }
 
+    function debouncedLayout() {
+        if (layoutTimer) clearTimeout(layoutTimer);
+        layoutTimer = setTimeout(adjustLayout, 100);
+    }
+
     if (typeof ResizeObserver !== "undefined") {
         try {
-            const resizeObserver = new ResizeObserver(adjustLayout);
+            const resizeObserver = new ResizeObserver(debouncedLayout);
             resizeObserver.observe(header);
         } catch (e) {}
     }
-    window.addEventListener("resize", adjustLayout);
+    window.addEventListener("resize", debouncedLayout);
 
     try {
         updateStatus("Loading...");
